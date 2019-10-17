@@ -1,0 +1,26 @@
+- name: Install DHIS2 with all the dependencies
+  hosts: dhis2-aio
+  vars:
+      hostname: "dhis2_aio"
+      system_timezone: "Europe/Brussels"
+      system_locale: "es_ES.UTF-8"
+      system_user: "dhis"
+      system_dhis_home: "/dhis2_home"
+      db_name: "dhis2"
+      db_user: "dhis"
+      db_pass: "dhis"
+      allow_remote_db_access: True
+      tomcat_http_port: "8080"
+      tomcat_dir: "tomcat-dhis"
+      jvm_xms: "1500m"
+      jvm_xmx: "2000m"
+      dhis_version: "2.33.0"
+      download_sample_db: "yes"
+  tasks:
+      - import_tasks: include/common.yml
+      - import_tasks: include/db.yml
+      - import_tasks: include/java.yml
+      - import_tasks: include/dhis.yml
+  handlers:
+      - import_tasks: handlers.yml
+

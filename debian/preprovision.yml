@@ -1,0 +1,7 @@
+- name: Run RAW commands for the initial set-up
+  hosts: dhis2-aio
+  gather_facts: no
+  vars:
+      apt_repository: "https://uk.alpinelinux.org"
+  tasks:
+      - import_tasks: include/base.yml

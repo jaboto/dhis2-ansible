@@ -1,0 +1,8 @@
+all:
+    hosts:
+        dhis2-aio:
+            ansible_port: 22
+            ansible_host: 192.168.122.171
+            ansible_user: root
+            ansible_password: root
+            ansible_ssh_common_args: '-o StrictHostKeyChecking=no'

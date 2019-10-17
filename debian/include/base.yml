@@ -1,0 +1,6 @@
+---
+# Minimal installation of Debian lacks Python, install it RAW mode so it can be provisoned with Ansible
+
+# Install Python
+- name: RAW - Install Python
+  raw: apt-get install -q -y python

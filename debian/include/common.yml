@@ -1,0 +1,41 @@
+---
+# This are the common tasks required to have a DHIS2 instance running
+#  more information can be found: https://docs.dhis2.org/master/en/implementer/html/dhis2_implementation_guide_full.html
+
+- name: "Set the timezone to {{ system_timezone }}"
+  timezone:
+      name: "{{ system_timezone }}"
+
+- name: "Generate default locales en_GB.UTF-8"
+  locale_gen:
+    name: en_GB.UTF-8
+    state: present
+
+- name: "Generate additional locales"
+  locale_gen:
+    name: "{{ system_locale }}"
+    state: present
+  when: system_locale != ""
+
+- name: "Install some Debian required packages for the following tasks to work"
+  apt:
+      name: "{{ packages }}"
+      update_cache: yes
+  vars:
+      packages:
+      - gnupg
+      - python-apt
+      - wget
+      - sudo
+    
+- name: "Add the user {{ system_user }}"
+  user: 
+    name: "{{ system_user }}"
+    shell: /bin/bash
+
+- name: "Create the directory {{ system_dhis_home }} for DHIS2 configuration files and make {{ system_user }} the owner"
+  file:
+      path: "{{ system_dhis_home }}"
+      state: directory
+      owner: "{{ system_user }}"
+      group: "{{ system_user }}"

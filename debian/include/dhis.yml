@@ -1,0 +1,56 @@
+---
+# This are the dhis2 specific tasks required to have a DHIS2 instance running
+#  more information can be found: https://docs.dhis2.org/master/en/implementer/html/dhis2_implementation_guide_full.html
+
+- name: "Copy the dhis.conf file in {{ system_dhis_home }}"
+  template: 
+    src: files/dhis.conf.j2
+    dest: "{{ system_dhis_home }}/dhis.conf"
+    owner: "{{ system_user }}"
+    group: "{{ system_user }}"
+    mode: '0600'
+
+- name: "Define DHIS download URLs if a subrelease was specified as a dhis_version (i.e. 2.33.0)"
+  set_fact: 
+    dhis_release_x: "{{ dhis_version.split('.')[0] }}"
+    dhis_release_y: "{{ dhis_version.split('.')[1] }}"
+    dhis_subrelease: true
+  when:
+    dhis_version.split('.') | length > 2 
+ 
+- name: "Download the DHIS2 main version {{ dhis_version }} (no subrelease specified)"
+  get_url:
+    url: "https://releases.dhis2.org/{{ dhis_version }}/dhis.war"
+    dest: "{{ system_dhis_home }}/{{ tomcat_dir }}/webapps/ROOT.war"
+  notify:
+    - stop tomcat instance
+    - start tomcat instance
+  when:
+      dhis_subrelease is not defined
+
+- name: "Download the DHIS2 subrelease version {{ dhis_version }}"
+  get_url:
+    url: "https://releases.dhis2.org/{{ dhis_release_x }}.{{ dhis_release_y }}/{{ dhis_version }}/dhis.war"
+    dest: "{{ system_dhis_home }}/{{ tomcat_dir }}/webapps/ROOT.war"
+  notify:
+    - stop tomcat instance
+    - start tomcat instance
+  when:
+      dhis_subrelease is defined and dhis_subrelease == True
+
+- name: "Download the database for DHIS2 {{ dhis_version }} (subreleases doesn't matter here as is the database of the release)"
+  get_url:
+    url: "https://databases.dhis2.org/sierra-leone/{{ dhis_release_x }}.{{ dhis_release_y }}/dhis2-db-sierra-leone.sql.gz"
+    dest: "/tmp/"
+ 
+- name: "Stop Tomcat before importing the database"
+  command: "{{ system_dhis_home }}/{{ tomcat_dir }}/bin/shutdown.sh"
+
+- name: "Import the downloaded database "
+  become: true
+  become_user: "{{ system_user }}"
+  shell: "zcat /tmp/dhis2-db-sierra-leone.sql.gz | psql -U {{ db_user }} -d {{ db_name }} -q -L /tmp/import.log -o /tmp/output.log"
+  notify:
+    - stop tomcat instance
+    - start tomcat instance
+  

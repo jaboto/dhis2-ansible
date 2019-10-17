@@ -1,0 +1,22 @@
+- name: restart postgresql server
+  service: 
+    name: postgresql
+    state: restarted
+
+- name: stop tomcat instance
+  become: true
+  become_user: "{{ system_user }}"
+  shell: cd {{ system_dhis_home }}/{{ tomcat_dir }}/bin && nohup ./shutdown.sh > /dev/null 2>&1 &
+
+- name: start tomcat instance
+  become: true
+  become_user: "{{ system_user }}"
+  shell: cd {{ system_dhis_home }}/{{ tomcat_dir }}/bin && nohup ./startup.sh > /dev/null 2>&1 &
+
+
+
+
+
+
+
+

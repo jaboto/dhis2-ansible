@@ -1,0 +1,125 @@
+---
+# This are the DB specific tasks required to have a DHIS2 instance running
+#  more information can be found: https://docs.dhis2.org/master/en/implementer/html/dhis2_implementation_guide_full.html
+
+- name: "Add postgresql key repository"
+  apt_key:
+      url: "https://www.postgresql.org/media/keys/ACCC4CF8.asc"
+      state: present
+
+- name: "Add the postgresql repository"
+  apt_repository:
+      repo: "deb http://apt.postgresql.org/pub/repos/apt/ buster-pgdg main"
+      state: present
+      filename: postgresql
+
+- name: "Install all the DB required packages (from postgresql repository)"
+  apt:
+      name: "{{ packages }}"
+      update_cache: yes
+  vars:
+      packages:
+      - postgresql-10
+      - postgresql-contrib-10
+      - postgresql-10-postgis-2.4
+      - python-psycopg2
+
+- name: "Create the user {{ db_user }} with password {{ db_pass }}"
+  become: true
+  become_user: "postgres"
+  postgresql_user:
+      name: "{{ db_user }}"
+      password: "{{ db_pass }}"
+
+- name: "Create the DB {{ db_name }}" 
+  become: true
+  become_user: "postgres"
+  postgresql_db:
+      name: "{{ db_name }}"
+      owner: "{{ db_user }}"
+      encoding: "UTF-8"
+
+- name: "Create the postgis extension for {{ db_name }}"
+  become: true
+  become_user: "postgres"
+  postgresql_ext:
+      name: postgis
+      db: "{{ db_name }}"
+  notify:
+      restart postgresql server
+
+- name: "Set postgresql server options - Work mem"
+  lineinfile:
+    path: /etc/postgresql/10/main/postgresql.conf
+    regexp: "^.*work_mem =.*$"
+    line: "work_mem = 20MB"
+  notify:
+      restart postgresql server
+
+- name: "Set postgresql server options - Maintenance work mem"
+  lineinfile:
+    path: /etc/postgresql/10/main/postgresql.conf
+    regexp: "^.*maintenance_work_mem = .*$"
+    line: "maintenance_work_mem = 20MB"
+  notify:
+      restart postgresql server
+
+- name: "Set postgresql server options - Effective cache size"
+  lineinfile:
+    path: /etc/postgresql/10/main/postgresql.conf
+    regexp: "^.*effective_cache_size = .*$"
+    line: "effective_cache_size = 2000MB"
+  notify:
+      restart postgresql server
+
+- name: "Set postgresql server options - Checkpoint completion target"
+  lineinfile:
+    path: /etc/postgresql/10/main/postgresql.conf
+    regexp: "^.*checkpoint_completion_target = .*$"
+    line: "checkpoint_completion_target = 0.8"
+  notify:
+      restart postgresql server
+
+- name: "Set postgresql server options - Synchronous commit"
+  lineinfile:
+    path: /etc/postgresql/10/main/postgresql.conf
+    regexp: "^.*synchronous_commit = .*$"
+    line: "synchronous_commit = off"
+  notify:
+      restart postgresql server
+
+- name: "Set postgresql server options - Random page cost"
+  lineinfile:
+    path: /etc/postgresql/10/main/postgresql.conf
+    regexp: "^.*random_page_cost = .*$"
+    line: "random_page_cost = 1.1"
+  notify:
+      restart postgresql server
+
+- name: "Set postgresql server options - Max locks per transaction (only SSD)"
+  lineinfile:
+    path: /etc/postgresql/10/main/postgresql.conf
+    regexp: "^.*max_locks_per_transaction = .*$"
+    line: "max_locks_per_transaction = 96"
+  notify:
+      restart postgresql server
+
+- name: "Modify postgresql.conf to allow remote access to the DB"
+  lineinfile:
+    path: /etc/postgresql/10/main/postgresql.conf
+    regexp: "^.*listen_addresses = .*$"
+    line: "listen_addresses = '*'"
+  when:
+      allow_remote_db_access == True
+  notify:
+      restart postgresql server
+
+- name: "Modify pg_hba.conf to allow remote access to the DB"
+  lineinfile:
+    path: /etc/postgresql/10/main/pg_hba.conf
+    line: "host all all 0.0.0.0/0  md5"
+    create: yes
+  when:
+      allow_remote_db_access == True
+  notify:
+      restart postgresql server

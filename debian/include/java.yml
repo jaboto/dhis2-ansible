@@ -1,0 +1,71 @@
+---
+# This are the Java specific tasks required to have a DHIS2 instance running
+#  more information can be found: https://docs.dhis2.org/master/en/implementer/html/dhis2_implementation_guide_full.html
+
+# Java packages seem to not be compatible ( Oct 2019) so use previous jdk from Stretch
+#  not sure if its Java 11 or Tomcat 9
+
+- name: "Add the Debian stretch repository"
+  apt_repository:
+      repo: "deb http://deb.debian.org/debian/ stretch main"
+      state: present
+      filename: stretch
+
+- name: "Install all the Java required packages"
+  apt:
+      name: "{{ packages }}"
+      update_cache: yes
+  vars:
+      packages:
+      - openjdk-8-jdk
+      - tomcat8-user
+
+- name: "Check if the tomcat instance is already present in {{ system_dhis_home }} in case we are reprovisioning - should never happen, but still..."
+  stat:
+      path: "{{ system_dhis_home }}/{{ tomcat_dir }}"
+  register:
+      instance_is_present
+
+- name: "Create the Tomcat instance with name {{ tomcat_dir }} in {{ system_dhis_home}}"
+  become: yes
+  become_user: "{{ system_user }}"
+  command: "tomcat8-instance-create -p {{ tomcat_http_port }} {{ tomcat_dir }}"
+  args:
+      chdir: "{{ system_dhis_home }}"
+  when: not instance_is_present.stat.isdir is defined
+
+- name: "Edit Tomcat environment options {{ system_dhis_home }}/{{ tomcat_dir }}/bin/setenv.sh - JAVA_HOME"
+  lineinfile:
+      path: "{{ system_dhis_home }}/{{ tomcat_dir }}/bin/setenv.sh"
+      line: "export JAVA_HOME='/usr/lib/jvm/java-8-openjdk-amd64/'"
+      create: yes
+      
+- name: "Edit Tomcat environment options {{ system_dhis_home }}/{{ tomcat_dir }}/bin/setenv.sh - JAVA_OPTS"
+  lineinfile:
+      path: "{{ system_dhis_home }}/{{ tomcat_dir }}/bin/setenv.sh"
+      line: "export JAVA_OPTS='-Xms{{ jvm_xms }} -Xmx{{ jvm_xmx }}'"
+      create: yes
+
+- name: "Edit Tomcat environment options {{ system_dhis_home }}/{{ tomcat_dir }}/bin/setenv.sh - DHIS2_HOME"
+  lineinfile:
+      path: "{{ system_dhis_home }}/{{ tomcat_dir }}/bin/setenv.sh"
+      line: "export DHIS2_HOME='{{ system_dhis_home }}'"
+      create: yes
+
+- name: "Set the relaxedQueryChars attribute in the server.xml"
+  replace:
+      path: "{{ system_dhis_home }}/{{ tomcat_dir }}/conf/server.xml"
+      regexp: '(<Connector .* protocol=\"HTTP\/1.1\")(\s+)(connectionTimeout)'
+      replace: '\g<1>\g<2>relaxedQueryChars="[]"\g<2>\g<3>'
+
+- name: "Modify the startup script so DHIS2 is never run as root"
+  blockinfile:
+      path: "{{ system_dhis_home }}/{{ tomcat_dir }}/bin/startup.sh"
+      insertafter: "#!/bin/sh"
+      block: |
+        set -e
+
+        if [ "$(id -u)" -eq "0" ]; then
+          echo "This script must NOT be run as root" 1>&2
+          exit 1
+        fi

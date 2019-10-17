@@ -1,0 +1,21 @@
+# ----------------------------------------------------------------------
+# Database connection
+# ----------------------------------------------------------------------
+# Hibernate SQL dialect
+connection.dialect = org.hibernate.dialect.PostgreSQLDialect
+# JDBC driver class
+connection.driver_class = org.postgresql.Driver
+# Database connection URL
+connection.url = jdbc:postgresql:{{ db_name }}
+# Database username
+connection.username = {{ db_user }}
+# Database password
+connection.password = {{ db_pass }}
+
+# ----------------------------------------------------------------------
+# Server
+# ----------------------------------------------------------------------
+# Enable secure settings if system is deployed on HTTPS, default 'off'
+# server.https = on
+# Server base URL
+# server.base.url = http://server.com/

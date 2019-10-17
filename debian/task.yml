@@ -1,0 +1,36 @@
+- name: Provision a single task for testing
+  hosts: dhis2-aio
+  vars:
+      hostname: "dhis2_aio"
+      system_timezone: "Europe/Brussels"
+      system_locale: ""
+      system_user: "dhis"
+      system_dhis_home: "/dhis2_home"
+      tomcat_dir: "tomcat-dhis"
+      db_name: "dhis2"
+      db_user: "dhis"
+      db_pass: "dhis"
+      http_port: "8080"
+  tasks:
+    - name: "Single task"
+      become: true
+      become_user: "{{ system_user }}"
+      shell: >
+        (
+        cd {{ system_dhis_home }}/{{ tomcat_dir }}/bin ;
+        nohup ./shutdown.sh > /dev/null 2>&1 ;
+        sleep 10 ; 
+        nohup ./startup.sh > /dev/null 2>&1 
+        ) &
+
+
+
+
+
+
+
+
+
+
+
+
